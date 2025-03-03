@@ -129,7 +129,7 @@ with open('setup.txt', 'r') as stp:
 
 def open_keyboard():
     if platform.platform()[0:7] != 'Windows':
-        sp.Popen(['onboard'])
+        sp.Popen(['onboard', "--layout", "Phone", "--theme", "HighContrast"])
 
 def close_keyboard():
     if platform.platform()[0:7] != 'Windows':
@@ -317,6 +317,10 @@ def verify(type, mass, comment='', container_type=None):
         typs = 'Kande '
     elif container_type == 'Kande' and type == 'I':
         typs = 'Kande'
+    elif container_type == 'IV' and type =='I':
+        typs = 'IV'
+    elif container_type == 'IV' and type == 'K':
+        typs = 'IV '
     elif type == 'U':
         typs = 'urin'
     elif type == 'A':
@@ -334,7 +338,7 @@ def verify(type, mass, comment='', container_type=None):
      #       timenow = datetime.datetime.now()
       #      gf.write(timenow.strftime("%d-%m-%Y, %H:%M:%S") + f';{typs};{comment};{minus}{mass} g\n')
     #Det nedenfor prøver at minus 45 gram fra output måling (bækkens vægt)
-    if container_type in ('Glas', 'Kop', 'Kande'):
+    if container_type in ('Glas', 'Kop', 'Kande', 'IV'):
         with open('measurements.txt', 'a') as gf:
             timenow = datetime.datetime.now()
             gf.write(timenow.strftime("%d-%m-%Y, %H:%M:%S") + f';{typs};{comment};{minus}{mass} g\n')
@@ -1132,7 +1136,10 @@ def iv_measurement(comment=''):
     input_entry.pack(pady=15, ipadx=15, ipady=10)
 
     # Begræns indtastning til 15 tegn
-    input_entry.bind("<KeyPress>", lambda event: "break" if len(input1.get()) >= 15 and event.keysym not in ("BackSpace", "Delete", "Left", "Right") else None)
+    input_entry.bind("<KeyPress>", lambda event: "break" 
+                 if (len(input1.get()) >= 5 and event.keysym not in ("BackSpace", "Delete", "Left", "Right")) 
+                 or (not event.char.isdigit() and event.keysym not in ("BackSpace", "Delete", "Left", "Right")) 
+                 else None)
 
     # Åbn keyboard ved fokus
     input_entry.bind("<FocusIn>", lambda event: open_keyboard())
@@ -1144,15 +1151,15 @@ def iv_measurement(comment=''):
     # **Brug `pack()` for at sikre, at knapperne er direkte under hinanden**
     #KNAPPERNE SKAL HAVE ANDRE "command", MEN LIGE NU HAR JEG BARE GJORT AT DET LUKKER VINDUET
     add = tk.Button(master=button_frame, text='Tilføj', bg='#007f93', fg='white', font=('Helvetica', 22),
-                    height=2, width=10, command=lambda: lukvindue())
+                    height=2, width=10, command=lambda: verify(type = "I", mass=input1.get() if input1.get() else "0", container_type = "IV"))
     add.pack(pady=5, fill="x")
 
     bin = tk.Button(master=button_frame, text='Kasser', bg='#b64909', fg='white', font=('Helvetica', 22),
-                    height=2, width=10, command=lambda: lukvindue())
+                    height=2, width=10, command=lambda: verify(type = "K", mass=input1.get() if input1.get() else "0", container_type = "IV"))
     bin.pack(pady=5, fill="x")
 
     # Tilbage-knap i øverste højre hjørne
-    backstafftest = tk.Button(master=backstaffpicker, text='Tilbage', bg='#525252', command=lambda: lukvindue(),
+    backstafftest = tk.Button(master=backstaffpicker, text='Tilbage', bg='#525252', command=lambda: cancel(), 
                             fg='white', font=('Helvetica', 14))
     backstafftest.place(x=650, y=10, height=50, width=120)
 
@@ -1467,15 +1474,21 @@ def iv_measure(): #Jeg prøvede bare at efterligne rungui_s for at få multiuse 
         test_on()
     iv_measurement()
 
-
+use = 0
 def rungui():
-    global back, weight_label, massv, backstaffpicker, mode, name, cprn, my_id
+    global back, weight_label, massv, backstaffpicker, mode, name, cprn, my_id, use
     back.destroy()
     print('der')
     try:
         backstaffpicker.destroy()
     except:
-        print('failed')
+        print('failed') 
+
+    if use == 0:
+        zeroscale()
+        use = 1
+
+    #zeroscale()
 
     cpr = ''
     name = ''
@@ -2116,14 +2129,14 @@ def runshowdata(picker):
         for key, value in test_dict.items():
             for vals in value:
                 if key in total_dict:
-                    if vals[1] in ['Glas ', 'Kop ', 'Kande ']:
+                    if vals[1] in ['Glas ', 'Kop ', 'Kande ', 'IV ']:
                         total_dict[key]['kasseret'] = str(int(total_dict[key]['kasseret']) + int(vals[3][1:-2]))
                         total_dict[key]['total'] = str(int(total_dict[key]['total']) - int(vals[3][1:-2]))
                     else:
                         total_dict[key]['input'] = str(int(total_dict[key]['input']) + int(vals[3][:-2]))
                         total_dict[key]['total'] = str(int(total_dict[key]['total']) + int(vals[3][:-2]))
                 else:
-                    if vals[1] in ['Glas ', 'Kop ', 'Kande ']:
+                    if vals[1] in ['Glas ', 'Kop ', 'Kande ', 'IV ']:
                         total_dict[key] = {
                             'input': '0',
                             'kasseret': str(int(vals[3][1:-2])),
@@ -2459,7 +2472,7 @@ def runshowdata(picker):
 
     # sp.Popen(['python', 'show_data.py'])
 
-zeroscale()
+#zeroscale()
 
 thread1 = thr.Thread(target=readmass)
 thread1.start()
