@@ -317,9 +317,9 @@ def verify(type, mass, comment='', container_type=None):
         typs = 'Kande '
     elif container_type == 'Kande' and type == 'I':
         typs = 'Kande'
-    elif container_type == 'IV' and type =='I':
+    elif container_type == 'IV' and type =='V':
         typs = 'IV'
-    elif container_type == 'IV' and type == 'K':
+    elif container_type == 'IV' and type == 'K': #Denne skal være kasseret IV
         typs = 'IV '
     elif type == 'U':
         typs = 'urin'
@@ -1149,9 +1149,8 @@ def iv_measurement(comment=''):
     button_frame.grid(row=1, column=1, padx=10, pady=30, sticky='N')
 
     # **Brug `pack()` for at sikre, at knapperne er direkte under hinanden**
-    #KNAPPERNE SKAL HAVE ANDRE "command", MEN LIGE NU HAR JEG BARE GJORT AT DET LUKKER VINDUET
     add = tk.Button(master=button_frame, text='Tilføj', bg='#007f93', fg='white', font=('Helvetica', 22),
-                    height=2, width=10, command=lambda: verify(type = "I", mass=input1.get() if input1.get() else "0", container_type = "IV"))
+                    height=2, width=10, command=lambda: verify(type = "V", mass=input1.get() if input1.get() else "0", container_type = "IV"))
     add.pack(pady=5, fill="x")
 
     bin = tk.Button(master=button_frame, text='Kasser', bg='#b64909', fg='white', font=('Helvetica', 22),
@@ -1171,55 +1170,6 @@ def iv_measurement(comment=''):
     add.update()
 
     backstaffpicker.update()
-
-'''elif mode == 'multiuse': #Multiuse er forkert her!!
-    my_id = ''
-    backstaffpicker = tk.Frame(master=win, bg='#fafafa')
-    backstaffpicker.pack(fill=tk.BOTH, expand=1)
-
-    backswitch_label1 = tk.Label(master=backstaffpicker, text='Lav måling', bg='#fafafa')
-    backswitch_label1.grid(row=0, column=1, sticky='NSEW', padx=10, pady=10)
-    backswitch_label1.config(font=("Helvetica", 25))
-
-    backswitch_label2 = tk.Label(master=backstaffpicker, text='Skan patient armbånd', bg='#fafafa')
-    backswitch_label2.grid(row=1, column=1, sticky='NSEW', padx=10, pady=10)
-    backswitch_label2.config(font=("Helvetica", 25))
-
-    backswitch_label3 = tk.Label(master=backstaffpicker, text='←', bg='#fafafa')
-    backswitch_label3.grid(row=1, column=0, sticky='W', padx=10, pady=0)
-    backswitch_label3.config(font=("Helvetica", 45))
-
-    backswitch_label4 = tk.Label(master=backstaffpicker, text='', bg='#fafafa')
-    backswitch_label4.grid(row=2, column=2, sticky='NSEW', padx=10, pady=0)
-    backswitch_label4.config(font=("Helvetica", 25))
-
-    # luk_vindue_button = tk.Button(master=backstaffpicker, bg='#525252', fg='white', text='Luk vindue',
-                                    # command=lambda: lukvindue(), height=1, width=1)
-    # luk_vindue_button.grid(row=2, column=2, sticky='NSEW', padx=10, pady=10)
-    # luk_vindue_button.config(font=("Helvetica", 25))
-
-    backstafftest = tk.Button(master=backstaffpicker, text='Tilbage', bg='#525252', command=lambda: lukvindue_light(),
-                                fg='white', width=100, height=50)
-    backstafftest.place(x=650, y=40, height=60, width=125)
-    backstafftest.config(font=('Helvetica', 15))
-    # backstafftest.pack()
-
-    backstaffpicker.grid_columnconfigure(0, weight=1)
-    backstaffpicker.grid_columnconfigure(1, weight=1)
-    backstaffpicker.grid_columnconfigure(2, weight=1)
-    backstaffpicker.rowconfigure(0, weight=1)
-    backstaffpicker.rowconfigure(1, weight=1)
-    backstaffpicker.rowconfigure(2, weight=1)
-
-    backstaffpicker.bind("<KeyPress>", check_input)
-
-    backstaffpicker.focus_set()
-
-    time.sleep(0.01)
-
-    backstafftest.update()
-
-    backstaffpicker.update()'''
 
 def switchtosingle():
     global backstaffpicker, backswitch, cprn, mode
@@ -1461,9 +1411,11 @@ def add_multi_measurement(type):
 
 
 def rungui_s():
-    global mode
+    global mode, cprn
     # zeroscale()
     if mode == 'multiuse':
+        with open('configuration.txt', 'w') as c:
+            c.write('multiuse;' + str(cprn) + '; \n')
         test_on()
     rungui()
 
