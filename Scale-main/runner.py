@@ -5,12 +5,16 @@ import threading as thr
 import time
 import datetime
 import platform
+from tkinter import messagebox
+import socket
+import psutil
 
 import customtkinter as ctk
 # import zxing
 
 import aws_uploader as au
 import Kern
+
 
 test = 24
 LEDs = 17
@@ -319,7 +323,7 @@ def verify(type, mass, comment='', container_type=None):
         typs = 'Kande'
     elif container_type == 'IV' and type =='V':
         typs = 'IV'
-    elif container_type == 'IV' and type == 'K': #Denne skal være kasseret IV
+    elif container_type == 'IV' and type == 'K': 
         typs = 'IV '
     elif type == 'U':
         typs = 'urin'
@@ -1137,7 +1141,7 @@ def iv_measurement(comment=''):
 
     # Begræns indtastning til 15 tegn
     input_entry.bind("<KeyPress>", lambda event: "break" 
-                 if (len(input1.get()) >= 5 and event.keysym not in ("BackSpace", "Delete", "Left", "Right")) 
+                 if (len(input1.get()) >= 4 and event.keysym not in ("BackSpace", "Delete", "Left", "Right")) 
                  or (not event.char.isdigit() and event.keysym not in ("BackSpace", "Delete", "Left", "Right")) 
                  else None)
 
@@ -1174,7 +1178,16 @@ def iv_measurement(comment=''):
 def switchtosingle():
     global backstaffpicker, backswitch, cprn, mode
 
+    au.sync_measurements()
+
     test_on()
+
+    file_name = os.path.join("temp", "pending_measurements.json")
+    if os.path.exists(file_name):
+        os.remove(file_name)
+        print(f"{file_name} slettet.")
+    else:
+        print(f"{file_name} findes ikke.")
 
     mode = 'singleuse'
 
@@ -1417,6 +1430,7 @@ def rungui_s():
         with open('configuration.txt', 'w') as c:
             c.write('multiuse;' + str(cprn) + '; \n')
         test_on()
+    au.sync_measurements()
     rungui()
 
 def iv_measure(): #Jeg prøvede bare at efterligne rungui_s for at få multiuse til at fungere (måske overflødigt)
@@ -1890,6 +1904,11 @@ def runstaff():
         backstaffpicker_label1.place(x=90, y=40, height=20, width=450, anchor='w')
         # backstaffpicker_label1.grid(row=0, column=1, sticky='W', padx=0, pady=0)
         backstaffpicker_label1.config(font=("Helvetica", 14, 'bold'), anchor='w')
+        
+        backstafftest = tk.Button(master=backstaffpicker, text='Sync', bg='#525252', command=lambda: au.sync_measurements(), fg='white', width=100, height=50)
+        backstafftest.place(x=650, y=110, height=60, width=125)
+        backstafftest.config(font=('Helvetica', 15))
+
 
         time.sleep(0.01)
 
@@ -2425,6 +2444,58 @@ def runshowdata(picker):
     # sp.Popen(['python', 'show_data.py'])
 
 #zeroscale()
+
+def check_wifi():
+    try:
+        socket.create_connection(("8.8.8.8", 53), timeout=2)
+        return True
+    except OSError:
+        return False
+
+def monitor_wifi():
+    global wifi_was_connected
+    is_connected = check_wifi()
+    
+    if not is_connected:
+        messagebox.showwarning("WiFi-fejl", "Mistet forbindelse til wifi! \n \nOPS: Husk at brug sync knappen på personalesiden når vægten har wifi igen")
+    
+    wifi_was_connected = is_connected  # Opdater status
+    root.after(300000, monitor_wifi)  # Tjek igen om 5 minutter
+
+# Initial opsætning
+root = tk.Tk()
+root.withdraw()  # Skjul hovedvinduet
+
+monitor_wifi()  # Start overvågning
+''' VIRKER PÅ PC MEN IKKE TIL DET BATTERI DER ER I VÆGTEN
+def check_battery():
+    battery = psutil.sensors_battery()
+    if battery is None:
+        return None  # Ingen batteri fundet (for stationære systemer)
+    
+    percent = battery.percent
+    plugged = battery.power_plugged
+    
+    return percent, plugged
+
+
+def monitor_battery():
+    percent, plugged = check_battery()
+    
+    if percent is not None:
+        if percent < 5 and not plugged:
+            messagebox.showwarning("Batteri advarsel", "Batteriet er meget lavt! Tilslut oplader!")
+        elif percent < 20 and not plugged:
+            messagebox.showwarning("Batteri advarsel", "Batteriet er lavt! Tilslut oplader.")
+    
+    root.after(60000, monitor_battery)  # Tjek hver minut
+
+# Initial opsætning
+root = tk.Tk()
+root.withdraw()  # Skjul hovedvinduet
+
+monitor_battery()  # Start overvågning
+'''
 
 thread1 = thr.Thread(target=readmass)
 thread1.start()
