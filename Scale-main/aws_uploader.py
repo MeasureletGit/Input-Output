@@ -44,7 +44,7 @@ def uploadmeasurement(mass, iottype, comment=''):
                 "weight": int(mass) - bedpan_weight,
                 "type": iottype,
                 "comment": comment,
-                "deviceId": "rpi_scale_test",
+                "deviceId": "Alex_test_1",
                 "bedpanWeight": bedpan_weight
             }]
         }
@@ -60,7 +60,7 @@ def uploadmeasurement(mass, iottype, comment=''):
                 "weight": mass,
                 "type": iottype,
                 "comment": comment,
-                "deviceId": "rpi_scale_test",
+                "deviceId": "Alex_test_1",
                 "bedpanWeight": 0
             }]
         }

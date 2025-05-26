@@ -10,7 +10,10 @@ def getMass():
             time.sleep(.1)
             data = ser.readline()
         try:
-            mass = float(data.decode().split(" g")[0].split(" ")[-1])
+            if "kg" in data.decode():
+                mass = float(data.decode().split(" kg")[0].split(" ")[-1])*1000
+            else:
+                mass = float(data.decode().split(" g")[0].split(" ")[-1])
         except:
             mass = 0
         return mass

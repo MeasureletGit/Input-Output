@@ -8,6 +8,7 @@ import platform
 from tkinter import messagebox
 import socket
 import psutil
+from tkinter.messagebox import showerror
 
 import customtkinter as ctk
 # import zxing
@@ -108,7 +109,7 @@ if platform.platform()[0:7] != 'Windows':
 win.resizable(0,0)
 win.event_generate('<Motion>', warp=True, x=0, y=480)
 
-software_version = '1.0.1a'
+software_version = '1.0.1a' #Bruger vi ikke da vi ikke har et versions system endnu
 
 my_id = ''
 mode = ''
@@ -149,6 +150,95 @@ def close_black_button(black_button):
     black_button.destroy()
     welcome()
 
+'''def input_choice(type, weight, comment, container_type=None):
+    global backstaffpicker, massv
+    print('her')
+
+    input1.set('')
+
+    backstaffpicker.destroy()
+
+    comment = comment.replace(';', '')
+
+    backstaffpicker = tk.Frame(master=win, bg='#fafafa')
+    backstaffpicker.pack(fill=tk.BOTH, expand=1)
+
+    leftframe = tk.Frame(master=backstaffpicker, bg='#fafafa', height=1)
+    leftframe.pack(fill=tk.BOTH, expand=1)
+
+    rightframe = tk.Frame(master=backstaffpicker, bg='#fafafa', height=10)
+    rightframe.pack(fill=tk.BOTH, expand=1)
+
+    backstaffpicker.rowconfigure(0, weight=1)
+    backstaffpicker.rowconfigure(1, weight=2)
+    backstaffpicker.grid_columnconfigure(0, weight=1)
+
+    input_label = tk.Label(master=leftframe, text=str(massv.get()), bg='#fafafa', height=1, width=1)
+    input_label.place(x=335, y=20, height=60, width=125)
+    input_label.config(font=('Helvetica', 25))
+
+    drink_label = tk.Label(master=backstaffpicker, text='Vælg hvad du har drukket', bg='#fafafa')
+    drink_label.place(x=150, y=115, height=30, width=500)
+    drink_label.config(font=("Helvetica", 20))
+
+    # Sæt ens kolonne-bredder
+    leftframe.grid_columnconfigure(0, weight=1, minsize=200)
+    leftframe.grid_columnconfigure(1, weight=1, minsize=200)
+
+    # Sæt 2 ekstra tomme rækker øverst + 3 rækker med knapper
+    for i in range(5):
+        leftframe.grid_rowconfigure(i, weight=1, minsize=80)
+
+    # Fælles stil og størrelse for knapper
+    common_width = 20
+    common_font = ('Helvetica', 25)
+    common_style = {
+        "master": leftframe,
+        "bg": '#007f93',
+        "fg": 'white',
+        "height": 2,
+        "width": common_width,
+        "font": common_font
+    }
+
+    # Ryk alle knapper ned med 2 rækker (starter fra row=2 nu)
+
+    # Øverste række
+    tk.Button(**common_style, text='Vand', command=lambda: verify(type, weight, "Vand", container_type)).grid(row=2, column=0, padx=5, pady=5, sticky='NSEW')
+    tk.Button(**common_style, text='Mælk', command=lambda: verify(type, weight, "Mælk", container_type)).grid(row=2, column=1, padx=5, pady=5, sticky='NSEW')
+
+    # Midterste række
+    tk.Button(**common_style, text='Kaffe', command=lambda: verify(type, weight, "Kaffe", container_type)).grid(row=3, column=0, padx=5, pady=5, sticky='NSEW')
+    tk.Button(**common_style, text='Sodavand', command=lambda: verify(type, weight, "Sodavand", container_type)).grid(row=3, column=1, padx=5, pady=5, sticky='NSEW')
+
+    # Nederste række
+    tk.Button(**common_style, text='The', command=lambda: verify(type, weight, "The", container_type)).grid(row=4, column=0, padx=5, pady=5, sticky='NSEW')
+
+
+    tk.Button(**common_style, text='Andet', command = lambda: approve(type, weight, comment)).grid(row=4, column=1, padx=5, pady=5, sticky='NSEW')
+
+        
+    backstafftest = tk.Button(master=backstaffpicker, text='Tilbage', bg='#525252', command=lambda: cancel(),
+    fg='white', width=100, height=50)
+    backstafftest.place(x=650, y=20, height=60, width=125)
+    backstafftest.config(font=('Helvetica', 15))
+
+    leftframe.rowconfigure(0, weight=1)
+    leftframe.rowconfigure(1, weight=1)
+    leftframe.grid_columnconfigure(0, weight=2)
+    leftframe.grid_columnconfigure(1, weight=1)
+
+    input1.trace('w', makeupper1)
+
+    #vand_button.update()
+    #maelk_button.update()
+    #kaffe_button.update()
+    #sodavand_button.update()
+    #the_button.update()
+    #andet_button.update()
+
+    backstaffpicker.update()
+'''
 def approve(type, weight, comment='', container_type=None):
     global backstaffpicker, massv, input1
     print('her')
@@ -231,8 +321,8 @@ def set_container(type, weight, comment=''):
     global backstaffpicker, massv, input1
     comment = comment.replace(';', '')
 
-    glass_weight = 148
-    cup_weight = 218
+    glass_weight = 155
+    cup_weight = 230
     pitcher_weight = 78
 
     input1.set('')
@@ -285,6 +375,18 @@ def verify(type, mass, comment='', container_type=None):
     if mass == '--':
         mass = '0'
 
+    # Forhindr 0 gram målinger
+    '''try:
+        if int(mass) <= 0:
+            showerror("Fejl", "Måling der vejer mindre end beholder er ikke tilladt.")
+            rungui_s()
+            return
+    except ValueError:
+        showerror("Fejl", "Ugyldig måling.")
+        rungui_s()
+        return
+        '''
+    
     with open('configuration.txt', 'r') as t:
         try:
             au.uploadmeasurement(mass, type, comment)
@@ -357,17 +459,89 @@ def verify(type, mass, comment='', container_type=None):
 
 
 def cancel():
-    global backstaffpicker
+    global backstaffpicker, mode
 
     close_keyboard()
 
-    #test_on()
+    if mode == 'multiuse':
+        test_on()
 
     rungui()
 
+'''
+def is_valid_cpr(cpr):
+    return (
+        cpr.isdigit() and
+        len(cpr) == 10 and
+        1 <= int(cpr[:2]) <= 31 and
+        1 <= int(cpr[2:4]) <= 12 and
+        int(cpr[0]) <= 3
+    )
+
+def extract_cpr_from_scanned(text):
+    if not text:
+        return None
+    
+    text = text.strip()
+
+    # Hvis første tegn er A, fjern de første to tegn
+    if len(text) >= 2 and text[1].lower() == 'c':
+        text = text[2:]
+    elif text[0].lower() == 'a':
+        text = text[1:]
+
+    cpr_candidate = ''
+    for char in text:
+        if char.isdigit():
+            cpr_candidate += char
+            if len(cpr_candidate) == 10:
+                break
+        else:
+            break  # Stop hvis der kommer ikke-tal undervejs
+
+    if is_valid_cpr(cpr_candidate):
+        return cpr_candidate
+    return None
 
 def check_input(e):
     global my_id, cprn
+
+    print(e.char, flush=True)
+
+    if e.char == '\r' or e.char == '\n':
+        cprn = ''
+        time.sleep(.1)
+        with open('measurelet.ID', 'r') as g:
+            scanned = g.readline().strip()
+            print(scanned, flush=True)
+            extracted_cpr = extract_cpr_from_scanned(scanned)
+            if not extracted_cpr:
+                print("Fejl: Ugyldigt eller manglende CPR-nummer", flush=True)
+                return
+            cprn = extracted_cpr  # Nu er cprn sat korrekt
+
+        if cprn == '2468135790':
+            with open('setup.txt', 'r') as ses:
+                put = ses.readline().strip()
+            put = 'output' if put == 'input' else 'input'
+            with open('setup.txt', 'w') as sew:
+                sew.write(put + '\n')
+
+        print('CPR gemt:', cprn, flush=True)
+        if mode == 'singleuse':
+            test_on()
+            checkinput()
+        elif mode == 'multiuse':
+            with open('configuration.txt', 'w') as c:
+                c.write('multiuse;' + str(cprn) + '; \n')
+                mode = 'multiuse'
+            multi_scan()
+    elif e.char.isalnum() or e.char == ',':
+        my_id += e.char
+'''
+
+def check_input(e):
+    global my_id, cprn, mode
     # print(e, flush=True)
 
     print(e.char, flush=True)
@@ -398,11 +572,15 @@ def check_input(e):
             print('check input', flush=True)
             checkinput()
         elif mode == 'multiuse':
+            with open('configuration.txt', 'w') as c:
+                c.write('multiuse;' + str(cprn) + '; \n')
+                mode = 'multiuse'
             multi_scan()
     elif e.char.isalnum() or e.char == ',':
         my_id += e.char
-        # print(my_id, flush=True)
-    '''
+
+
+'''
     found = True
     while found:
         with open('measurelet.ID', 'r') as g:
@@ -725,7 +903,10 @@ def checkinput():
         d.write(' \n')
 
     if len(cprn) > 10:
-        cprn = cprn[2:12]
+        if cprn[1].lower() == 'c':
+            cprn = cprn[2:12]
+        elif cprn[0].lower() == 'a':
+            cprn = cprn[1:]
 
     with open('configuration.txt', 'w') as c:
         c.write('singleuse;' + str(cprn) + '; \n')
@@ -1139,7 +1320,7 @@ def iv_measurement(comment=''):
     input_entry = tk.Entry(master=input_frame, textvariable=input1, bg='white', font=('Helvetica', 22), width=30, justify="center")
     input_entry.pack(pady=15, ipadx=15, ipady=10)
 
-    # Begræns indtastning til 15 tegn
+    # Begræns indtastning til 4 tegn
     input_entry.bind("<KeyPress>", lambda event: "break" 
                  if (len(input1.get()) >= 4 and event.keysym not in ("BackSpace", "Delete", "Left", "Right")) 
                  or (not event.char.isdigit() and event.keysym not in ("BackSpace", "Delete", "Left", "Right")) 
@@ -1164,7 +1345,7 @@ def iv_measurement(comment=''):
     # Tilbage-knap i øverste højre hjørne
     backstafftest = tk.Button(master=backstaffpicker, text='Tilbage', bg='#525252', command=lambda: cancel(), 
                             fg='white', font=('Helvetica', 14))
-    backstafftest.place(x=650, y=10, height=50, width=120)
+    backstafftest.place(x=662, y=10, height=50, width=120)
 
     input1.trace('w', makeupper1)
 
@@ -1453,8 +1634,6 @@ def rungui():
     if use == 0:
         zeroscale()
         use = 1
-
-    #zeroscale()
 
     cpr = ''
     name = ''
@@ -2457,7 +2636,7 @@ def monitor_wifi():
     is_connected = check_wifi()
     
     if not is_connected:
-        messagebox.showwarning("WiFi-fejl", "Mistet forbindelse til wifi! \n \nOPS: Husk at brug sync knappen på personalesiden når vægten har wifi igen")
+        messagebox.showwarning("WiFi-fejl", "Mistet forbindelse til wifi! \n \nOBS: Husk at brug sync knappen på personalesiden når vægten har wifi igen")
     
     wifi_was_connected = is_connected  # Opdater status
     root.after(300000, monitor_wifi)  # Tjek igen om 5 minutter
