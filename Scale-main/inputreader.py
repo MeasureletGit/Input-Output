@@ -11,22 +11,19 @@ def on_press(c):
     if not c is None:
         c = str(c)
         if len(c) == 3:
-            c = c[1]
-        if c == "c":
-            pass
+            c = c[1]  # fx 'a' -> a
         if c == 'Key.enter':
-            with open(mypath+ "measurelet.ID", 'w') as f:
+            with open(mypath + "measurelet.ID", 'w') as f:
                 if len(buffer) > 1 and buffer[1] == '#':
                     with open(mypath + "scanner.txt", 'w') as s:
                         s.write(buffer[0])
                     buffer = buffer[2:]
-                # print(buffer, flush=True)
                 f.write(buffer)
             buffer = ""
         elif c == 'Key.left':
             sp.call(["sudo", "killall", "-9", "python"])
             sp.call(["sudo", "killall", "-9", "python3"])
-        elif len(c) == 1 and c in ('#', 'A', 'C', 'a', 'c', ',', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'):
+        elif len(c) == 1 and (c.isalnum() or c in ('#', ',')):
             buffer += c
 
 

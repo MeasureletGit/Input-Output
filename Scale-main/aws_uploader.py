@@ -21,7 +21,7 @@ if not os.path.exists(pending_file):
 fluidmonitor_url = 'https://dev.fluidbalancemonitor.com/api/public/device/events'
 
 def uploadmeasurement(mass, iottype, comment=''):
-    bedpan_weight = 45
+    bedpan_weight = 0
     with open('configuration.txt', 'r') as r:
         con = r.readline().strip()
         cprn = con.split(';')[1]
@@ -41,7 +41,7 @@ def uploadmeasurement(mass, iottype, comment=''):
                 "patientName": "",
                 "customerId": "",
                 "createdTime": createdTime,
-                "weight": int(mass) - bedpan_weight,
+                "weight": int(mass),
                 "type": iottype,
                 "comment": comment,
                 "deviceId": "Alex_test_1",

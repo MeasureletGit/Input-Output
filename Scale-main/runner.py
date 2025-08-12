@@ -363,12 +363,49 @@ def set_container(type, weight, comment=''):
     button2.update()
     button3.update()
 
+def set_container_output(type, weight, comment=''):
+    global backstaffpicker, massv, input1
+    comment = comment.replace(';', '')
+
+    diaper_weight = 100
+    bedpan_weight = 45
+
+    input1.set('')
+
+    backstaffpicker.destroy()
+
+    backstaffpicker = tk.Frame(master=win, bg='#fafafa')
+    backstaffpicker.pack(fill=tk.BOTH, expand=1)
+
+    backstafftest = tk.Button(master=backstaffpicker, text='Tilbage', bg='#525252', command=lambda: cancel(),
+        fg='white', width=100, height=50)
+    backstafftest.place(x=650, y=40, height=60, width=125)
+    backstafftest.config(font=('Helvetica', 15))
+
+    button1 = tk.Button(master=backstaffpicker, text='Ble', command = lambda: approve(type, str(int(weight) - diaper_weight), comment, "Ble"), bg = '#007f93', fg = 'white', height = 1, width = 1)
+    button1.grid(row=0, column=0, padx=25, pady=125, sticky='NSEW')
+    button1.config(font=('Helvetica', 25))
+    # button1.pack()
+
+    button2 = tk.Button(master=backstaffpicker, text='Bækken', command = lambda: approve(type, str(int(weight) - bedpan_weight), comment, "Bækken"), bg = '#007f93', fg = 'white', height = 1, width = 1)
+    button2.grid(row=0, column=1, padx=25, pady=125, sticky='NSEW')
+    button2.config(font=('Helvetica', 25))
+    # button2.pack()
+
+    backstaffpicker.rowconfigure(0, weight=1)
+    backstaffpicker.grid_columnconfigure(0, weight=1)
+    backstaffpicker.grid_columnconfigure(1, weight=1)
+
+    backstaffpicker.update()
+
+    button1.update()
+    button2.update()
+
+
     
 def verify(type, mass, comment='', container_type=None):
     global backstaffpicker
     comment = comment.replace(';', '')
-
-    bedpan_weight = 45
 
     close_keyboard()
 
@@ -376,16 +413,15 @@ def verify(type, mass, comment='', container_type=None):
         mass = '0'
 
     # Forhindr 0 gram målinger
-    '''try:
-        if int(mass) <= 0:
-            showerror("Fejl", "Måling der vejer mindre end beholder er ikke tilladt.")
-            rungui_s()
-            return
+    try:
+            if int(mass) <= 0 and "kropsvægt" not in comment.lower():
+                showerror("Fejl", "Måling der vejer mindre end beholder er ikke tilladt.")
+                rungui_s()
+                return
     except ValueError:
         showerror("Fejl", "Ugyldig måling.")
         rungui_s()
         return
-        '''
     
     with open('configuration.txt', 'r') as t:
         try:
@@ -427,6 +463,8 @@ def verify(type, mass, comment='', container_type=None):
         typs = 'IV'
     elif container_type == 'IV' and type == 'K': 
         typs = 'IV '
+    #elif container_type == 'B_weight' and type =='BW':
+     #   typs = 'Body_weight'
     elif type == 'U':
         typs = 'urin'
     elif type == 'A':
@@ -443,15 +481,18 @@ def verify(type, mass, comment='', container_type=None):
     #with open('measurements.txt', 'a') as gf:
      #       timenow = datetime.datetime.now()
       #      gf.write(timenow.strftime("%d-%m-%Y, %H:%M:%S") + f';{typs};{comment};{minus}{mass} g\n')
-    #Det nedenfor prøver at minus 45 gram fra output måling (bækkens vægt)
     if container_type in ('Glas', 'Kop', 'Kande', 'IV'):
         with open('measurements.txt', 'a') as gf:
             timenow = datetime.datetime.now()
             gf.write(timenow.strftime("%d-%m-%Y, %H:%M:%S") + f';{typs};{comment};{minus}{mass} g\n')
-    else: 
+    elif type in ('U', 'A', 'B') and "kropsvægt" not in comment.lower():
         with open('measurements.txt', 'a') as gf:
             timenow = datetime.datetime.now()
-            gf.write(timenow.strftime("%d-%m-%Y, %H:%M:%S") + f';{typs};{comment};{minus}{int(mass)-bedpan_weight} g\n')
+            gf.write(timenow.strftime("%d-%m-%Y, %H:%M:%S") + f';{typs};{comment};{minus}{int(mass)} g\n')
+    else:
+        with open('measurements.txt', 'a') as gf:
+            timenow = datetime.datetime.now()
+            gf.write(timenow.strftime("%d-%m-%Y, %H:%M:%S") + f';{typs};{comment};{minus}{int(mass)} g\n')
     backstaffpicker.update()
 
     win.after(3000, rungui_s)
@@ -468,43 +509,45 @@ def cancel():
 
     rungui()
 
-'''
+#Det her bruges til at sørge for at kun rigtige danske cpr-numre blvier scannet, men det laver problemer med udlandske folk der gerne må have bogstaver i de sidste 4 cifre
 def is_valid_cpr(cpr):
-    return (
-        cpr.isdigit() and
-        len(cpr) == 10 and
-        1 <= int(cpr[:2]) <= 31 and
-        1 <= int(cpr[2:4]) <= 12 and
-        int(cpr[0]) <= 3
-    )
+    if len(cpr) != 10:
+        return False
+    if not cpr[:6].isdigit():
+        return False
+    day = int(cpr[:2])
+    month = int(cpr[2:4])
+    year = int(cpr[4:6])
+    return 1 <= day <= 31 and 1 <= month <= 12
 
 def extract_cpr_from_scanned(text):
     if not text:
         return None
-    
+
     text = text.strip()
 
-    # Hvis første tegn er A, fjern de første to tegn
+    # Fjern 'AC' eller 'A' i starten
     if len(text) >= 2 and text[1].lower() == 'c':
         text = text[2:]
     elif text[0].lower() == 'a':
         text = text[1:]
 
-    cpr_candidate = ''
+    candidate = ''
     for char in text:
-        if char.isdigit():
-            cpr_candidate += char
-            if len(cpr_candidate) == 10:
-                break
+        if char.isalnum():
+            candidate += char
+            if len(candidate) == 10:
+                if is_valid_cpr(candidate):
+                    return candidate
+                else:
+                    candidate = ''  # Start forfra hvis ugyldig
         else:
-            break  # Stop hvis der kommer ikke-tal undervejs
+            candidate = ''  # Reset ved f.eks. mellemrum
 
-    if is_valid_cpr(cpr_candidate):
-        return cpr_candidate
     return None
 
 def check_input(e):
-    global my_id, cprn
+    global my_id, cprn, mode
 
     print(e.char, flush=True)
 
@@ -516,9 +559,9 @@ def check_input(e):
             print(scanned, flush=True)
             extracted_cpr = extract_cpr_from_scanned(scanned)
             if not extracted_cpr:
-                print("Fejl: Ugyldigt eller manglende CPR-nummer", flush=True)
+                messagebox.showerror("CPR-fejl", "Ugyldigt CPR-nummer")
                 return
-            cprn = extracted_cpr  # Nu er cprn sat korrekt
+            cprn = extracted_cpr
 
         if cprn == '2468135790':
             with open('setup.txt', 'r') as ses:
@@ -538,8 +581,9 @@ def check_input(e):
             multi_scan()
     elif e.char.isalnum() or e.char == ',':
         my_id += e.char
-'''
 
+
+''' Gammel version af check input hvor der var fejl med at cpr numre kunne blive scannet forkert
 def check_input(e):
     global my_id, cprn, mode
     # print(e, flush=True)
@@ -577,7 +621,7 @@ def check_input(e):
                 mode = 'multiuse'
             multi_scan()
     elif e.char.isalnum() or e.char == ',':
-        my_id += e.char
+        my_id += e.char'''
 
 
 '''
@@ -686,6 +730,12 @@ def multi_scan():
         iv.place(x=40, y=40, height=60, width=125)
         iv.config(font=('Helvetica', 15))
 
+        b_weight = tk.Button(master=backstaffpicker, text='Kropsvægt', bg='#525252', command=lambda: body_weight(),
+                                            fg='white', width=100, height=50)
+        b_weight.place(x=40, y=100, height=60, width=125)
+        b_weight.config(font=('Helvetica', 15))
+
+
         # weight_button2.grid(row=3, column=1, sticky='NSEW', padx=10, pady=10)
         # weight_button2.config(font=('Helvetica', 25))
 
@@ -747,6 +797,7 @@ def multi_scan():
         reset.update()
         iv.update()
         backstafftest.update()
+        b_weight.update()
 
         # win.after(100, zeroscale)
 
@@ -809,21 +860,21 @@ def multi_scan():
         backstafftop.grid_columnconfigure(0, weight=1)
 
         weight_button1 = tk.Button(master=backstaffpicker, text='Urin',
-                                   command=lambda: approve('U', massv.get()[:-2]), bg='#007f93', fg='white',
+                                   command=lambda: set_container_output('U', massv.get()[:-2]), bg='#007f93', fg='white',
                                    height=1, width=1)
         weight_button1.place(x=20, y=300, height=150, width=240)
         weight_button1.config(font=('Helvetica', 25))
         # weight_button1.pack()
 
         weight_button2 = tk.Button(master=backstaffpicker, text='Afføring',
-                                   command=lambda: approve('A', massv.get()[:-2]), bg='#b64909', fg='white',
+                                   command=lambda: set_container_output('A', massv.get()[:-2]), bg='#b64909', fg='white',
                                    height=1, width=1)
         weight_button2.place(x=280, y=300, height=150, width=240)
         weight_button2.config(font=('Helvetica', 25))
         # weight_button2.pack()
 
         weight_button3 = tk.Button(master=backstaffpicker, text='Andet',
-                                   command=lambda: approve('B', massv.get()[:-2]), bg='#00935e', fg='white',
+                                   command=lambda: set_container_output('B', massv.get()[:-2]), bg='#00935e', fg='white',
                                    height=1, width=1)
         weight_button3.place(x=540, y=300, height=150, width=240)
         weight_button3.config(font=('Helvetica', 25))
@@ -839,6 +890,12 @@ def multi_scan():
                                         fg='white', width=100, height=50)
         reset.place(x=650, y=100, height=60, width=125)
         reset.config(font=('Helvetica', 15))
+
+        b_weight = tk.Button(master=backstaffpicker, text='Kropsvægt', bg='#525252', command=lambda: body_weight(),
+                                            fg='white', width=100, height=50)
+        b_weight.place(x=40, y=40, height=60, width=125)
+        b_weight.config(font=('Helvetica', 15))
+
 
         backstaffbottom.rowconfigure(0, weight=1)
         backstaffbottom.grid_columnconfigure(0, weight=1)
@@ -856,6 +913,7 @@ def multi_scan():
         weight_button3.update()
         reset.update()
         backstafftest.update()
+        b_weight.update()
 
         backstaffpicker.focus_set()
 
@@ -1021,6 +1079,11 @@ def new_single_user(navn):
     backstafftest.config(font=('Helvetica', 15))
     # backstafftest.pack()
 
+    backstafftest = tk.Button(master=backstaffpicker, text='Support', bg='#525252', command=lambda: support(), fg='white', width=100, height=50)
+    backstafftest.place(x=650, y=100, height=60, width=125)
+    backstafftest.config(font=('Helvetica', 15))
+
+
     backstaffpicker.grid_columnconfigure(0, weight=1)
     backstaffpicker.rowconfigure(0, weight=1)
     backstaffpicker.rowconfigure(1, weight=1)
@@ -1159,6 +1222,7 @@ def welcome():
     close.configure(font=('Helvetica', '22'))
     # close.pack()
 
+    
     back.grid_columnconfigure(0, weight=1)
     back.grid_columnconfigure(1, weight=1)
     back.grid_columnconfigure(2, weight=1)
@@ -1171,6 +1235,7 @@ def welcome():
     back.grid_rowconfigure(2, weight=1)
 
     back.focus_set()
+
 
     gui.update()
     showdata.update()
@@ -1314,7 +1379,7 @@ def iv_measurement(comment=''):
     input_frame = tk.Frame(master=backstaffpicker, bg='#fafafa')
     input_frame.grid(row=1, column=0, pady=100, padx=20, sticky='NSEW') 
 
-    input_label = tk.Label(master=input_frame, text="Indtast vægt i gram", bg='#fafafa', font=('Helvetica', 22))
+    input_label = tk.Label(master=input_frame, text="Indtast vægt på intravenøs væske i gram", bg='#fafafa', font=('Helvetica', 22))
     input_label.pack()
 
     input_entry = tk.Entry(master=input_frame, textvariable=input1, bg='white', font=('Helvetica', 22), width=30, justify="center")
@@ -1355,6 +1420,152 @@ def iv_measurement(comment=''):
     add.update()
 
     backstaffpicker.update()
+
+
+def body_weight(comment=''):
+    global backstaffpicker, input1, name, cpr, mode
+    back.destroy()
+    print('der')
+    try:
+        backstaffpicker.destroy()
+    except:
+        print('failed')
+
+    cpr = ''
+    name = ''
+    with open('configuration.txt', 'r') as cnf:
+        conf = cnf.readline().strip()
+        if mode == 'singleuse':
+            cpr = conf.split(';')[1]
+            name = conf.split(';')[2]
+    
+    #if scale_type == 'input':
+     #   if mode == 'singleuse':
+    input1.set('')
+    #backstaffpicker.destroy()
+
+    comment = comment.replace(';', '')
+    
+    #name = ''
+    #with open('configuration.txt', 'r') as cnf:
+     #   conf = cnf.readline().strip()
+      #  if mode == 'singleuse':
+       #     cpr = conf.split(';')[1]
+        #    name = conf.split(';')[2]
+
+
+    
+    backstaffpicker = tk.Frame(master=win, bg='#fafafa')
+    backstaffpicker.pack(fill=tk.BOTH, expand=1)
+
+    
+    backstaffpicker.grid_rowconfigure(0, weight=1) 
+    backstaffpicker.grid_rowconfigure(1, weight=3)  
+    backstaffpicker.grid_rowconfigure(2, weight=1) 
+
+    backstaffpicker.grid_columnconfigure(0, weight=2)  
+    backstaffpicker.grid_columnconfigure(1, weight=1)  
+
+    # Navn og CPR labels
+    backstaffpicker_label2 = tk.Label(master=backstaffpicker, text='Navn: ', bg='#fafafa', fg='#575756', font=("Helvetica", 14), anchor='w')
+    backstaffpicker_label2.place(x=20, y=50, height=20, width=125, anchor='w')
+    
+    backstaffpicker_label4 = tk.Label(master=backstaffpicker, text=name, bg='#fafafa', fg='#575756', font=("Helvetica", 14, 'bold'), anchor='w')
+    backstaffpicker_label4.place(x=120, y=50, height=20, width=450, anchor='w')
+
+    backstaffpicker_label5 = tk.Label(master=backstaffpicker, text='CPR-nr.: ', bg='#fafafa', fg='#575756', font=("Helvetica", 14), anchor='w')
+    backstaffpicker_label5.place(x=20, y=90, height=20, width=125, anchor='w')
+
+    backstaffpicker_label6 = tk.Label(master=backstaffpicker, text=cprn[0:6] + '-xxxx', bg='#fafafa', fg='#575756', font=("Helvetica", 14, 'bold'), anchor='w')
+    backstaffpicker_label6.place(x=120, y=90, height=20, width=450, anchor='w')
+
+    # Input felt sektion 
+    input_frame = tk.Frame(master=backstaffpicker, bg='#fafafa')
+    input_frame.grid(row=1, column=0, pady=100, padx=20, sticky='NSEW') 
+
+    input_label = tk.Label(master=input_frame, text="Indtast din kropsvægt i kg", bg='#fafafa', font=('Helvetica', 22))
+    input_label.pack()
+
+    input_entry = tk.Entry(master=input_frame, textvariable=input1, bg='white', font=('Helvetica', 22), width=30, justify="center")
+    input_entry.pack(pady=15, ipadx=15, ipady=10)
+
+    # Begræns indtastning til 4 tegn
+    input_entry.bind("<KeyPress>", lambda event: "break" 
+    if (len(input1.get()) >= 5 and event.keysym not in ("BackSpace", "Delete", "Left", "Right"))
+    or (not (event.char.isdigit() or event.char in ",.") and event.keysym not in ("BackSpace", "Delete", "Left", "Right"))
+    else None)
+
+    # Åbn keyboard ved fokus
+    input_entry.bind("<FocusIn>", lambda event: open_keyboard())
+
+
+    # Knapper i højre side
+    button_frame = tk.Frame(master=backstaffpicker, bg='#fafafa')
+    button_frame.grid(row=1, column=1, padx=10, pady=30, sticky='N')
+
+    # **Brug `pack()` for at sikre, at knapperne er direkte under hinanden**
+    add = tk.Button(master=button_frame, text='Tilføj', bg='#007f93', fg='white', font=('Helvetica', 22),
+                    height=2, width=10, command=lambda: verify(type = "B", comment="Kropsvægt = "+input1.get()+" kg" if input1.get() else "0", mass="0", container_type = "B_weight"))
+    add.pack(pady=5, fill="x")
+
+    # Tilbage-knap i øverste højre hjørne
+    backstafftest = tk.Button(master=backstaffpicker, text='Tilbage', bg='#525252', command=lambda: cancel(), 
+                            fg='white', font=('Helvetica', 14))
+    backstafftest.place(x=662, y=10, height=50, width=120)
+
+    input1.trace('w', makeupper1)
+
+    input_entry.focus_set()
+
+    add.update()
+
+    backstaffpicker.update()
+
+def support():
+    global backstaffpicker  
+    back.destroy()
+    print('der')
+    try:
+        backstaffpicker.destroy()
+    except:
+        print('failed')
+
+    backstaffpicker = tk.Frame(master=win, bg='#fafafa')
+    backstaffpicker.pack(fill=tk.BOTH, expand=1)
+
+    
+    backstaffpicker.grid_rowconfigure(0, weight=1) 
+    backstaffpicker.grid_rowconfigure(1, weight=3)  
+    backstaffpicker.grid_rowconfigure(2, weight=1) 
+
+    backstaffpicker.grid_columnconfigure(0, weight=2)  
+    backstaffpicker.grid_columnconfigure(1, weight=1)  
+
+    support_label = tk.Label(master=backstaffpicker, text='Support', bg='#fafafa')
+    support_label.place(x=90, y=30, height=50, width=600)
+    support_label.config(font=("Helvetica", 30, 'bold'))
+
+    phoneNumber_label = tk.Label(master=backstaffpicker, text='Telefon: +45 29921111', bg='#fafafa')
+    phoneNumber_label.place(x=90, y=120, height=35, width=600)
+    phoneNumber_label.config(font=("Helvetica", 20))
+
+    
+    mail_label = tk.Label(master=backstaffpicker, text='Mail: support@measurelet.com', bg='#fafafa')
+    mail_label.place(x=90, y=180, height=35, width=600)
+    mail_label.config(font=("Helvetica", 20))
+
+    info_label = tk.Label(master=backstaffpicker, text='Telefon åben Mandag til fredag kl. 7-17 \nEllers er du er altid velkommen til at sende en mail', bg='#fafafa')
+    info_label.place(x=65, y=240, height=60, width=700)
+    info_label.config(font=("Helvetica", 20))
+
+    # Tilbage-knap i øverste højre hjørne
+    backstafftest = tk.Button(master=backstaffpicker, text='Tilbage', bg='#525252', command=lambda: lukvindue(), 
+                            fg='white', font=('Helvetica', 14))
+    backstafftest.place(x=662, y=10, height=50, width=120)
+
+
+    backstaffpicker.update()
+
 
 def switchtosingle():
     global backstaffpicker, backswitch, cprn, mode
@@ -1690,6 +1901,11 @@ def rungui():
             iv.place(x=40, y=40, height=60, width=125)
             iv.config(font=('Helvetica', 15))
 
+            b_weight = tk.Button(master=backstaffpicker, text='Kropsvægt', bg='#525252', command=lambda: body_weight(),
+                                            fg='white', width=100, height=50)
+            b_weight.place(x=40, y=100, height=60, width=125)
+            b_weight.config(font=('Helvetica', 15))
+
             # backstafftest.pack()
 
             # weight_button3 = tk.Button(master=backstaffpicker, text='Tilbage', bg='#525252',
@@ -1714,6 +1930,7 @@ def rungui():
             reset.update()
             iv.update()
             backstafftest.update()
+            b_weight.update()
 
             backstaffpicker.update()
 
@@ -1842,7 +2059,7 @@ def rungui():
             name_label2.config(font=('Helvetica', 20))
 
             weight_button1 = tk.Button(master=backstaffpicker, text='Urin',
-                                       command=lambda: approve('U', massv.get()[:-2]), bg='#007f93', fg='white',
+                                       command=lambda: set_container_output('U', massv.get()[:-2]), bg='#007f93', fg='white',
                                        height=1, width=1)
             weight_button1.place(x=20, y=300, height=150, width=240)
             # weight_button1.grid(row=3, column=0, sticky='NSEW', padx=10, pady=10)
@@ -1850,7 +2067,7 @@ def rungui():
             # weight_button1.pack()
 
             weight_button2 = tk.Button(master=backstaffpicker, text='Afføring',
-                                       command=lambda: approve('A', massv.get()[:-2]), bg='#b64909', fg='white',
+                                       command=lambda: set_container_output('A', massv.get()[:-2]), bg='#b64909', fg='white',
                                        height=1, width=1)
             weight_button2.place(x=280, y=300, height=150, width=240)
             # weight_button2.grid(row=3, column=1, sticky='NSEW', padx=10, pady=10)
@@ -1858,7 +2075,7 @@ def rungui():
             # weight_button2.pack()
 
             weight_button3 = tk.Button(master=backstaffpicker, text='Andet',
-                                       command=lambda: approve('B', massv.get()[:-2]), bg='#00935e', fg='white',
+                                       command=lambda: set_container_output('B', massv.get()[:-2]), bg='#00935e', fg='white',
                                        height=1, width=1)
             weight_button3.place(x=540, y=300, height=150, width=240)
             # weight_button3.grid(row=3, column=1, sticky='NSEW', padx=10, pady=10)
@@ -1875,6 +2092,11 @@ def rungui():
                                             fg='white', width=100, height=50)
             reset.place(x=650, y=100, height=60, width=125)
             reset.config(font=('Helvetica', 15))
+
+            b_weight = tk.Button(master=backstaffpicker, text='Kropsvægt', bg='#525252', command=lambda: body_weight(),
+                                            fg='white', width=100, height=50)
+            b_weight.place(x=40, y=40, height=60, width=125)
+            b_weight.config(font=('Helvetica', 15))
 
 
             # weight_button3 = tk.Button(master=backstaffpicker, text='Tilbage', bg='#525252', command=lambda: lukvindue(), fg='white', height=1, width=1)
@@ -1896,6 +2118,7 @@ def rungui():
             weight_button3.update()
             reset.update()
             backstafftest.update()
+            b_weight.update()
 
             backstaffpicker.update()
 
@@ -2085,7 +2308,11 @@ def runstaff():
         backstaffpicker_label1.config(font=("Helvetica", 14, 'bold'), anchor='w')
         
         backstafftest = tk.Button(master=backstaffpicker, text='Sync', bg='#525252', command=lambda: au.sync_measurements(), fg='white', width=100, height=50)
-        backstafftest.place(x=650, y=110, height=60, width=125)
+        backstafftest.place(x=650, y=100, height=60, width=125)
+        backstafftest.config(font=('Helvetica', 15))
+        
+        backstafftest = tk.Button(master=backstaffpicker, text='Support', bg='#525252', command=lambda: support(), fg='white', width=100, height=50)
+        backstafftest.place(x=650, y=160, height=60, width=125)
         backstafftest.config(font=('Helvetica', 15))
 
 
@@ -2138,6 +2365,10 @@ def runstaff():
         backstaffpicker_label1.place(x=90, y=40, height=20, width=450, anchor='w')
         # backstaffpicker_label1.grid(row=0, column=1, sticky='W', padx=0, pady=0)
         backstaffpicker_label1.config(font=("Helvetica", 14, 'bold'), anchor='w')
+
+        backstafftest = tk.Button(master=backstaffpicker, text='Support', bg='#525252', command=lambda: support(), fg='white', width=100, height=50)
+        backstafftest.place(x=650, y=100, height=60, width=125)
+        backstafftest.config(font=('Helvetica', 15))
 
         time.sleep(0.01)
 
@@ -2444,63 +2675,63 @@ def runshowdata(picker):
         backframe.place(x=45, y=175, height=30, width=480)
 
         description_label = tk.Label(master=backstaffpicker, text='Tid' , bg='#ececec', fg='#575756', height=20)
-        description_label.place(x=53, y=180, height=22, width=100)
+        description_label.place(x=53, y=175, height=22, width=100)
         description_label.config(font=("Helvetica", 12, 'bold'))
         
         with open('setup.txt', 'r') as stp:
             scale_type = stp.readline().strip()
             if scale_type not in ('output'):
                 description_label = tk.Label(master=backstaffpicker, text='Beholder' , bg='#ececec', fg='#575756', height=20)
-                description_label.place(x=150, y=180, height=22, width=120)
+                description_label.place(x=147, y=175, height=22, width=120)
                 description_label.config(font=("Helvetica", 12, 'bold'))
             else:
                 description_label = tk.Label(master=backstaffpicker, text='Type' , bg='#ececec', fg='#575756', height=20)
-                description_label.place(x=150, y=180, height=22, width=120)
+                description_label.place(x=147, y=175, height=22, width=120)
                 description_label.config(font=("Helvetica", 12, 'bold'))
 
         with open('setup.txt', 'r') as stp:
             scale_type = stp.readline().strip()
             if scale_type not in ('output'):
-                description_label = tk.Label(master=backstaffpicker, text='Drikkevare' , bg='#ececec', fg='#575756', height=20)
-                description_label.place(x=285, y=180, height=22, width=120)
+                description_label = tk.Label(master=backstaffpicker, text='Drikkevare/ \nKropsvægt' , bg='#ececec', fg='#575756', height=20)
+                description_label.place(x=285, y=168, height=37, width=120)
                 description_label.config(font=("Helvetica", 12, 'bold'))
             else:
-                description_label = tk.Label(master=backstaffpicker, text='Kommentar' , bg='#ececec', fg='#575756', height=20)
-                description_label.place(x=285, y=180, height=22, width=120)
+                description_label = tk.Label(master=backstaffpicker, text='Kommentar/ \nKropsvægt' , bg='#ececec', fg='#575756', height=20)
+                description_label.place(x=285, y=168, height=37, width=120)
                 description_label.config(font=("Helvetica", 12, 'bold'))
 
         description_label = tk.Label(master=backstaffpicker, text='Måling' , bg='#ececec', fg='#575756', height=20)
-        description_label.place(x=425, y=180, height=22, width=100)
+        description_label.place(x=425, y=175, height=22, width=100)
         description_label.config(font=("Helvetica", 12, 'bold'))
 
         #Vandrette linjer
         canvas = tk.Canvas(master=backstaffpicker, bg='#fafafa')
-        canvas.place(x=45, y=170, height=5, width=480)
+        canvas.place(x=45, y=163, height=5, width=480)
         canvas.create_line(2, 2, 485, 2, fill='black', width=3)
 
         canvas = tk.Canvas(master=backstaffpicker)
-        canvas.place(x=45, y=200, height=5, width=480)
+        canvas.place(x=45, y=205, height=5, width=480)
         canvas.create_line(2, 2, 485, 2, fill='black', width=3)
 
         #Lodrette linjer
         canvas = tk.Canvas(master=backstaffpicker, bg='#fafafa')
-        canvas.place(x=45, y=170, height=480, width=5)
+        canvas.place(x=45, y=163, height=480, width=5)
         canvas.create_line(2, 2, 485, 2, fill='black', width=1000)
     
         canvas = tk.Canvas(master=backstaffpicker, bg='#fafafa')
-        canvas.place(x=153, y=170, height=480, width=5)
+        canvas.place(x=153, y=163, height=480, width=5)
         canvas.create_line(2, 2, 485, 2, fill='black', width=1000)
 
         canvas = tk.Canvas(master=backstaffpicker, bg='#fafafa')
-        canvas.place(x=255, y=170, height=480, width=5)
+        canvas.place(x=255, y=163, height=480, width=5)
         canvas.create_line(2, 2, 485, 2, fill='black', width=1000)
 
         canvas = tk.Canvas(master=backstaffpicker, bg='#fafafa')
-        canvas.place(x=425, y=170, height=480, width=5)
+        canvas.place(x=425, y=163, height=480, width=5)
         canvas.create_line(2, 2, 485, 2, fill='black', width=1000)
 
         canvas = tk.Canvas(master=backstaffpicker, bg='#fafafa')
-        canvas.place(x=520, y=170, height=480, width=5)
+        canvas.place(x=520, y=163, height=480, width=5)
         canvas.create_line(2, 2, 485, 2, fill='black', width=1000)
 
 
